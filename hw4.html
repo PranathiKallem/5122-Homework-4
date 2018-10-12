@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8" />
+<head>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <style type="text/css">
+    svg {
+      font: 12px arial;
+    } 
+    svg .myrect:hover {
+        fill: gray;
+    }
+    </style>
+  <script type="text/javascript">
+    //Variable Declaration
+    var wholeData;
+    var BarGraphData;
+    // set the dimensions and margins of the graph
+    var BarGraphMargin = { top: 50, right: 20, bottom: 20, left: 150 };
+    var BarGraphsvgWidth = 1000 - BarGraphMargin.left - BarGraphMargin.right;
+    var BarGraphsvgHeight = 750 - BarGraphMargin.top - BarGraphMargin.bottom;
+
+    function loadData() {
+      d3.csv("https://raw.githubusercontent.com/PranathiKallem/5122-Homework-4/master/losses2015_transformed.csv")
+        .then(function (data) {
+
+          wholeData = data;
+
+          d3.select("#svg_bar")
+            .attr("width", BarGraphsvgWidth + BarGraphMargin.left + BarGraphMargin.right)
+            .attr("height", BarGraphsvgHeight + BarGraphMargin.top + BarGraphMargin.bottom)
+            .append("g")
+            .attr("id", "svg_bar_g_id")
+            .attr("transform", "translate(" + BarGraphMargin.left + "," + BarGraphMargin.top + ")");
+
+          generateDataBar(null);
+          createBarChart();
+
+          // BarGraphData = d3.nest()
+          //   .key(function (d) { return d.Damage_Descp; })
+          //   .rollup(function (d) {
+          //     return d3.sum(d, function (g) { return g.Amount; });
+          //   })
+          //   .entries(data);
+          // BarGraphData.sort(function (a, b) { return b.value - a.value; })
+          // createBarChart();
+          // console.log(BarGraphData)
+        });
+    }
+
+    function generateDataBar(myCommodity) {
+      
+      if (myCommodity) {
+         
+        d3.select("#title_bar").text("Losses 2015 [$] State: " + myCommodity);
+
+        BarGraphData = d3.nest()
+          .key(function (d) { return d.Damage_Descp; })
+          .rollup(function (d) { return d3.sum(d, function (g) { return g.Amount; }); })
+          .entries(wholeData.filter(function (d) { return d.Damage_Descp.replace(/ /g, '') == myCommodity; }));
+       
+        BarGraphData.sort(function (a, b) { 
+          return ascending(b.value,a.value); 
+          });
+      } else {
+        
+        d3.select("#title_bar").text("Losses 2015 [$] State: All");
+
+        BarGraphData = d3.nest()
+          .key(function (d) { return d.Damage_Descp; })
+          .rollup(function (d) { return d3.sum(d, function (g) { return g.Amount; }); })
+          .entries(wholeData);
+        BarGraphData.sort(function (a, b) { return b.value-a.value; });
+      }
+    }
+
+    function createBarChart() {
+      // append the svg object to the body of the page
+      // append a 'group' element to 'svg'
+      // moves the 'group' element to the top left BarGraphMargin
+
+      var svg = d3.select("#svg_bar_g_id");
+      // set the ranges
+      var y = d3.scaleBand()
+        .range([BarGraphsvgHeight, 0])
+        .padding(0.1);
+
+      var x = d3.scaleLinear()
+        .range([0, BarGraphsvgWidth]);
+
+      // // format the data
+      // BarGraphData.forEach(function (d) {
+      //   d.Amount = +d.Amount;
+      // });
+      // Scale the range of the data in the domains
+      x.domain([0, d3.max(BarGraphData, function (d) { return d.value; })])
+      y.domain(BarGraphData.map(function (d) { return d.key; }));
+      //y.domain([0, d3.max(data, function(d) { return d.Amount; })]);
+
+      // append the rectangles for the bar chart
+      svg.selectAll(".bar")
+        .data(BarGraphData)
+        .enter().append("rect")
+        .attr("class", "bar")
+        // .attr("x", function (d) { return x(d.value); })
+        .attr("y", function (d) { return y(d.key); })
+        .attr("width", function (d) { return x(d.value); })
+        .attr("height", y.bandwidth())
+        .attr("class", "myrect")
+        .on("mouseover", function (d) {
+          generateDataBar(d.key);
+          // removeTreeMap();
+          // createTreeMap();
+        })
+        .on("mouseout", function (d) {
+          generateDataBar(null);
+          // removeTreeMap();
+          // createTreeMap();
+        });
+
+      // add the x Axis
+      svg.append("g")
+        .attr("transform", "translate(0," + BarGraphsvgHeight + ")")
+        .call(d3.axisBottom(x));
+
+      // add the y Axis
+      svg.append("g")
+        .call(d3.axisLeft(y));
+    }
+    window.onload = loadData;
+  </script>
+
+
+</head>
+<body>
+
+  <table align="center">
+  <tr><td><div id="title_bar" align="center">Losses 2015 [$] State: All</div><svg id="svg_bar"></svg></td></tr>
+  </table>
+
+  </body>
+
+</html>
